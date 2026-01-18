@@ -132,7 +132,7 @@ exports.deleteTask = async (req, res) => {
 // @desc    Update task status (for Kanban)
 // @route   PATCH /api/tasks/:id/status
 // @access  Private
-exports.updateTaskStatus = async (req, res) => {
+export const updateTaskStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
@@ -143,11 +143,24 @@ exports.updateTaskStatus = async (req, res) => {
       });
     }
 
-    const task = await Task.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true, runValidators: true }
-    ).populate('assignedTo', 'name email');
+    const task = await Task.findById(req.params.id);
+  task.status = status;
+  await task.save();
+
+  await ActivityLog.create({
+    user: req.user._id,
+    action: `moved task to ${status}`,
+    entityType: "Task",
+    entityId: task._id
+  });
+
+  res.json(task);
+
+    // const task = await Task.findByIdAndUpdate(
+    //   req.params.id,
+    //   { status },
+    //   { new: true, runValidators: true }
+    // ).populate('assignedTo', 'name email');
 
     if (!task) {
       return res.status(404).json({
